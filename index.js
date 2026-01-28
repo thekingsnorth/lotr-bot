@@ -51,6 +51,22 @@ async function saveConfig(cfg) {
 }
 
 // ---------- OpenAI (Responses API) ----------
+
+function trimNicely(text, maxLen = 260) {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (t.length <= maxLen) return t;
+
+  const cut = t.slice(0, maxLen);
+
+  const lastSentence = Math.max(cut.lastIndexOf("."), cut.lastIndexOf("!"), cut.lastIndexOf("?"));
+  if (lastSentence >= 60) return cut.slice(0, lastSentence + 1).trim();
+
+  const lastSpace = cut.lastIndexOf(" ");
+  if (lastSpace >= 60) return cut.slice(0, lastSpace).trim() + "…";
+
+  return cut.trim() + "…";
+}
+
 async function generateAmbientMessage({
   locationName,
   lore,
@@ -117,6 +133,7 @@ if (!res.ok) {
   throw new Error(`OpenAI ${res.status}: ${short}`);
 }
 
+
   const data = await res.json();
 
   const text = (data.output || [])
@@ -131,7 +148,7 @@ if (!res.ok) {
     throw new Error("OpenAI returned no text.");
   }
 
-  return text.replace(/\s+/g, " ").trim().slice(0, 260);
+  return trimNicely(text, 260);
 }
 
 // ---------- Discord ----------
