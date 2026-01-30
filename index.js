@@ -54,20 +54,33 @@ async function saveConfig(cfg) {
 
 // ---------- OpenAI (Responses API) ----------
 
-function trimNicely(text, maxLen = 260) {
-  const t = text.replace(/\s+/g, " ").trim();
-  if (t.length <= maxLen) return t;
+function trimNicely(text, maxLen = 220) {
+  if (!text) return "";
 
-  const cut = t.slice(0, maxLen);
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxLen) return clean;
 
-  const lastSentence = Math.max(cut.lastIndexOf("."), cut.lastIndexOf("!"), cut.lastIndexOf("?"));
-  if (lastSentence >= 60) return cut.slice(0, lastSentence + 1).trim();
+  // Try to end at sentence punctuation
+  const truncated = clean.slice(0, maxLen);
+  const lastPunct = Math.max(
+    truncated.lastIndexOf("."),
+    truncated.lastIndexOf("!"),
+    truncated.lastIndexOf("?")
+  );
 
-  const lastSpace = cut.lastIndexOf(" ");
-  if (lastSpace >= 60) return cut.slice(0, lastSpace).trim() + "…";
+  if (lastPunct > 80) {
+    return truncated.slice(0, lastPunct + 1).trim();
+  }
 
-  return cut.trim() + "…";
+  // Otherwise end at last space
+  const lastSpace = truncated.lastIndexOf(" ");
+  if (lastSpace > 80) {
+    return truncated.slice(0, lastSpace).trim() + "…";
+  }
+
+  return truncated.trim() + "…";
 }
+
 
 async function generateAmbientMessage({
   locationName,
@@ -84,10 +97,10 @@ async function generateAmbientMessage({
     "You generate ONE short ambient in-world event message for a Lord of the Rings style setting.",
     "Write subtle Tolkien-like prose mixed with world simulation.",
     "Never use second-person language. Never say 'you'.",
-    "Do not imply people are present.",
+    "Write in the present tense.",
     "No modern references. No emojis. No hashtags. No quotes.",
     "Avoid named canon characters.",
-    "Length: 1–2 sentences, max 260 characters.",
+    "Length: 1–2 sentences, ideally under 150 characters, never exceed 200 characters.",
     "Return ONLY the message text.",
   ].join(" ");
 
@@ -120,7 +133,7 @@ async function generateAmbientMessage({
         { role: "user", content: user },
       ],
       temperature: 1.0,
-      max_output_tokens: 140,
+      max_output_tokens: 70,
     }),
   });
 
@@ -150,7 +163,7 @@ if (!res.ok) {
     throw new Error("OpenAI returned no text.");
   }
 
-  return trimNicely(text, 260);
+  return trimNicely(text, 220);
 }
 
 // ---------- Discord ----------
