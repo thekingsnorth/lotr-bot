@@ -16,7 +16,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 if (!DISCORD_TOKEN) throw new Error("Missing DISCORD_TOKEN in .env");
 if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY in .env");
 
-const DATA_FILE = path.join(__dirname, "channel-config.json");
+const DATA_FILE = process.env.DATA_FILE_PATH
+  ? process.env.DATA_FILE_PATH
+  : path.join(__dirname, "channel-config.json");
 const POST_EVERY_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 // ---------- Helpers ----------
