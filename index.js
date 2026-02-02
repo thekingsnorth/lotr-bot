@@ -261,10 +261,10 @@ async function runScheduledPosts() {
 }
 
 function startSchedule() {
-  // First run shortly after startup, then every 4 hours
-  setTimeout(() => runScheduledPosts().catch(console.error), 15_000);
+  // First run shortly after startup, then every 12 hours
+  setTimeout(() => runScheduledPosts().catch(console.error), 29_000);
   setInterval(() => runScheduledPosts().catch(console.error), POST_EVERY_MS);
-  console.log("Rolling schedule started: every 4 hours from startup.");
+  console.log("Rolling schedule started: every 12 hours from startup.");
 }
 
 client.once("ready", async () => {
