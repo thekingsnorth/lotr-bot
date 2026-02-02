@@ -8,6 +8,7 @@ const {
   Routes,
   SlashCommandBuilder,
   PermissionFlagsBits,
+  AttachmentBuilder,
 } = require("discord.js");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -19,7 +20,7 @@ if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY in .env");
 const DATA_FILE = process.env.DATA_FILE_PATH
   ? process.env.DATA_FILE_PATH
   : path.join(__dirname, "channel-config.json");
-const POST_EVERY_MS = 4 * 60 * 60 * 1000; // 4 hours
+const POST_EVERY_MS = 10 * 60 * 60 * 1000; // 10 hours
 
 // ---------- Helpers ----------
 function getTimeOfDay(date = new Date()) {
@@ -174,6 +175,20 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const commands = [
   new SlashCommandBuilder()
+  .setName("ambient_export")
+  .setDescription("Export all ambient channel configs as a JSON file.")
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  .toJSON(),
+
+new SlashCommandBuilder()
+  .setName("ambient_import")
+  .setDescription("Import ambient configs from a JSON file (replaces current configs).")
+  .addAttachmentOption(opt =>
+    opt.setName("file").setDescription("Upload channel-config.json").setRequired(true)
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  .toJSON(),
+new SlashCommandBuilder()
     .setName("ambient_set")
     .setDescription("Configure ambient LOTR events for this channel.")
     .addStringOption((opt) =>
@@ -261,10 +276,10 @@ async function runScheduledPosts() {
 }
 
 function startSchedule() {
-  // First run shortly after startup, then every 12 hours
+  // First run shortly after startup, then every 10 hours
   setTimeout(() => runScheduledPosts().catch(console.error), 29_000);
   setInterval(() => runScheduledPosts().catch(console.error), POST_EVERY_MS);
-  console.log("Rolling schedule started: every 12 hours from startup.");
+  console.log("Rolling schedule started: every 10 hours from startup.");
 }
 
 client.once("ready", async () => {
@@ -274,7 +289,63 @@ client.once("ready", async () => {
 });
 
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName === "ambient_export") {
+  const cfg = await loadConfig();
+  const json = JSON.stringify(cfg, null, 2);
+  const attachment = new AttachmentBuilder(Buffer.from(json, "utf8"), {
+    name: "channel-config.json",
+  });
+
+  await interaction.reply({
+    content: "Here’s the current ambient config file:",
+    files: [attachment],
+    ephemeral: true,
+  });
+  return;
+}
+if (interaction.commandName === "ambient_import") {
+  const file = interaction.options.getAttachment("file", true);
+
+  // Basic safety: only accept JSON-ish files
+  if (!file.name.toLowerCase().endsWith(".json")) {
+    await interaction.reply({ content: "❌ Please upload a .json file.", ephemeral: true });
+    return;
+  }
+
+  await interaction.reply({ content: "Importing…", ephemeral: true });
+
+  // Download the uploaded file
+  const res = await fetch(file.url);
+  if (!res.ok) {
+    await interaction.followUp({ content: "❌ Could not download the uploaded file.", ephemeral: true });
+    return;
+  }
+
+  const text = await res.text();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    await interaction.followUp({ content: "❌ That file is not valid JSON.", ephemeral: true });
+    return;
+  }
+
+  // Validate shape
+  if (!parsed || typeof parsed !== "object" || typeof parsed.channels !== "object") {
+    await interaction.followUp({
+      content: "❌ JSON must contain a top-level object with a 'channels' object.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  // Save
+  await saveConfig(parsed);
+  await interaction.followUp({ content: "✅ Imported successfully. (This replaces existing configs.)", ephemeral: true });
+  return;
+}
+if (!interaction.isChatInputCommand()) return;
 
   const cfg = await loadConfig();
   const channelId = interaction.channelId;
