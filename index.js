@@ -95,7 +95,10 @@ async function generateAmbientMessage({
 
   const system = [
     "You generate ONE short ambient in-world event message for a Lord of the Rings style setting.",
-    "Write subtle Tolkien-like prose mixed with world simulation.",
+	"Try not to reference the same animals or situations repeatedly. Ensure variety.",
+	"When describing the time of day, use different phrases to add more variety.",
+	"If the lore or criteria mention living people then ensure you talk more about people and what they are doing than the natural events.",
+	"Write subtle Tolkien-like prose mixed with world simulation.",
     "Never use second-person language. Never say 'you'.",
     "Write in the present tense.",
     "No modern references. No emojis. No hashtags. No quotes.",
