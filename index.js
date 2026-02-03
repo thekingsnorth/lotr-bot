@@ -20,7 +20,7 @@ if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY in .env");
 const DATA_FILE = process.env.DATA_FILE_PATH
   ? process.env.DATA_FILE_PATH
   : path.join(__dirname, "channel-config.json");
-const POST_EVERY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const POST_EVERY_MS = 40 * 60 * 60 * 1000; // 40 hours
 
 // ---------- Helpers ----------
 function getTimeOfDay(date = new Date()) {
